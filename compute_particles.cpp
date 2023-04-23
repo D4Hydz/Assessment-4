@@ -80,9 +80,9 @@ int main(int argc, char* argv[])
 
   // -----------------------------------------------------------  
   // Initialise variables
-  double epsilon = 1.73466e-21;
-  double sigma = 0.3345e-9;
-  double mass = 6.63e-26;
+  double epsilon = 0.0103; // In eV
+  double sigma = 3.345; // In angstroms (Å)
+  double mass = 39.948; // In amu
   int save_counter = 0;
   
   // Calculate and save data for timestep t = 0. 
@@ -140,7 +140,7 @@ void update_vel(std::vector<body> &system, double dt)
     vec velocity = system[i].get_vel();
     vec acceleration = system[i].get_acc();
     
-    velocity +=(dt / 2 *(acceleration)); // Calculates new velocity over half a timestep.
+    velocity +=((dt / 2) *(acceleration)); // Calculates new velocity over half a timestep.
     system[i].set_vel(velocity); // Sets new velocity to particle.
   }
 }
@@ -167,14 +167,15 @@ void update_acc(std::vector<body> &system, double epsilon, double sigma, double 
           // Uses the differential equation of the Lennard-Jones potential.
           vec force = difference / (length) * (24 * (epsilon / length) * (2 * pow((sigma / length), 12) - pow((sigma / length), 6)));
           
+          // Acceleration in eV/amu, scale 0.0001
           tot_force += (force); // Sums the different forces on the particle.
         }
       }
-      system[i].set_acc(tot_force / (mass)); // Calculates and sets acceleration variable of planet.
+      system[i].set_acc(tot_force / (mass)); // Calculates and sets acceleration variable of particle.
+      
     }
 }
 
-// -----------------------------------------------------------
 void read_init(std::string input_file, std::vector<body> &system)
 {
   std::string line; // Declare a string to store each line
