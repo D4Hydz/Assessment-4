@@ -1,6 +1,5 @@
-// Assessment 3: n-body gravitational solver
+// Assessment 4: N-body Particle Model
 
-// To avoid warnings tell the compiler to use a recent standard of C++:
 // g++ -std=c++17 vector3d.cpp body.cpp compute_particles.cpp -o compute_particles
 // ./compute_particles particles.csv test.csv 1e-5 1080 1
 
@@ -19,23 +18,18 @@ using std::cout, std::endl;
 // ######################################
 // ####### Function declarations ########
 // ######################################
-// -----------------------------------------------------------
-// ADD YOUR FUNCTION DECLARATIONS HERE
 
-// Compute the new velocity and position of each particle in the system 
+// Compute the new velocity and position of each particle in the system.
 void update_vel(std::vector<body> &system, double dt);
-void update_pos(std::vector<body> &system, double dt);
+void update_pos(std::vector<body> &system, double dt, double boundry);
 // Calculate the accelerations of planets in the system at a timestep.
 void update_acc(std::vector<body> &system, double epsilon, double sigma, double mass);
-// Calculate the new positions and velocites of planets in the system at a given timestep.
-void verlet(std::vector<body> &system, double dt, double epsilon, double sigma, double mass);
 // Read input data from file
 void read_init(std::string input_file, std::vector<body> &system);
 // Read the components of a 3d vector from a line
 void read_vector3d(std::stringstream& data_line, double& x, double& y, double& z);
 // Save the data to file
 void save_data(std::ofstream& savefile, const std::vector<body> &system);
-
 
 // ######################################
 // ################ MAIN ################
@@ -83,16 +77,18 @@ int main(int argc, char* argv[])
   double epsilon = 0.0103; // In eV
   double sigma = 3.345; // In angstroms (Å)
   double mass = 39.948; // In amu
+  double boundry = 3.0; // Sets the boundries of the cube where the centre is (0, 0, 0)
   int save_counter = 0;
   
-  // Calculate and save data for timestep t = 0. 
   update_acc(system, epsilon, sigma, mass); // Calculate acceleration at t = 0
-  save_data(savefile, system);
+  save_data(savefile, system); // Calculate and save data for timestep t = 0.
     
-  // Loop steps until it reaches total number for time steps 'T'.
-  for (int t=1; t<=T; t++)
+  for (int t=1; t<=T; t++) // Loop steps until it reaches total number for time steps 'T'.
   {
-    verlet(system, dt, epsilon, sigma, mass); // Runs Vel_verlet function.
+    update_vel(system, dt);
+    update_pos(system, dt, boundry);
+    update_acc(system, epsilon, sigma, mass);
+    update_vel(system, dt); // Runs Vel_verlet function.
     
     save_counter++; // Adds 1 to Tsave step counter.
 
@@ -106,29 +102,33 @@ int main(int argc, char* argv[])
   return EXIT_SUCCESS; 
 }
 
-
 // ######################################
 // ###### Function implementations ######
 // ######################################
-void verlet(std::vector<body> &system, double dt, double epsilon, double sigma, double mass)
-{
-  // Completes the leap frog integration scheme in order.
-  update_vel(system, dt);
-  update_pos(system, dt);
-  update_acc(system, epsilon, sigma, mass);
-  update_vel(system, dt);
-} 
 
-void update_pos(std::vector<body> &system, double dt)
+void update_pos(std::vector<body> &system, double dt, double boundry)
 { 
   for (int i = 0; i < system.size(); i++)
   {
-    // Initialise variables for this planet.
-    vec pos = system[i].get_pos();
+    vec pos = system[i].get_pos(); // Initialise variables for this planet.
     vec velocity = system[i].get_vel();
 
     pos += (dt*(velocity)); // Calculates new position based on new velocity.
     system[i].set_pos(pos); // Sets new position.
+
+    // Checking if particle positions are on the boundry. 
+    if (pos.getx() >= boundry || pos.getx() <= -boundry)
+    {
+      system[i].set_vel(velocity.negx()); // Negates the x value of the velocity.
+    }
+    if (pos.gety() >= boundry || pos.gety() <= -boundry) // Negates the y value of the velocity.
+    {
+      system[i].set_vel(velocity.negy());
+    }
+    if (pos.getz() >= boundry || pos.getz() <= -boundry) // Negates the z value of the velocity.
+    {
+      system[i].set_vel(velocity.negz());
+    }
   }
 }
 

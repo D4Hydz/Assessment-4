@@ -170,3 +170,45 @@ double vec::angle(const vec &v) const
 	double v_len = v.length(); // Compute |v|
 	return acos(udotv/(u_len*v_len)); // Invert u.v = |u|*|v|*cos(theta)
 }
+
+double vec::getx() const
+{
+	double x = x_;
+	return x;
+}
+
+double vec::gety() const
+{
+	double y = y_;
+	return y;
+}
+ 
+double vec::getz() const
+{
+	double z = z_;
+	return z;
+}
+
+vec vec::negx() const
+{
+	return vec(
+		x_ * -1,
+		y_,
+		z_);
+}
+
+vec vec::negy() const
+{
+	return vec(
+		x_,
+		y_ * -1,
+		z_);
+}
+
+vec vec::negz() const
+{
+	return vec(
+		x_,
+		y_,
+		z_ * -1);
+}

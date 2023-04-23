@@ -58,6 +58,21 @@ public:
 	//  Angle between this vector another vector v
 	double angle(const vec &v) const;
 
+	// Return x vector value
+	double getx() const;
+
+	// Return y vector value
+	double gety() const;
+
+	// Return z vector value
+	double getz() const;
+
+	vec negx() const;
+
+	vec negy() const;
+
+	vec negz() const;
+
 private:
     // Components of the 3d vector
 	double x_;
