@@ -24,6 +24,8 @@ void update_vel(std::vector<body> &system, double dt);
 void update_pos(std::vector<body> &system, double dt, double boundry);
 // Calculate the accelerations of planets in the system at a timestep.
 void update_acc(std::vector<body> &system, double epsilon, double sigma, double mass);
+// Calculates the temperature of the system.
+double calc_temp(std::vector<body> &system, double mass);
 // Read input data from file
 void read_init(std::string input_file, std::vector<body> &system);
 // Read the components of a 3d vector from a line
@@ -174,6 +176,17 @@ void update_acc(std::vector<body> &system, double epsilon, double sigma, double 
       system[i].set_acc(tot_force / (mass)); // Calculates and sets acceleration variable of particle.
       
     }
+}
+
+double calc_temp(std::vector<body> &system, double mass)
+{
+  double tot_energy = 0;
+  for (int i = 0; i < system.size(); i++) // Loop through particles.
+  {
+    tot_energy += (0.5 * mass * system[i].get_vel().lengthsq());
+  }
+  // Note the values need to be adjusted depending on units of mass and epsilon ect. ##########################
+  return(tot_energy / (1.5 * 1.38e-23)); // Returns temperature of system.
 }
 
 void read_init(std::string input_file, std::vector<body> &system)
