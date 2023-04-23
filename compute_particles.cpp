@@ -1,7 +1,8 @@
 // Assessment 3: n-body gravitational solver
 
 // To avoid warnings tell the compiler to use a recent standard of C++:
-// g++ -std=c++17 vector3d.cpp body.cpp compute_orbits.cpp -o compute_orbits
+// g++ -std=c++17 vector3d.cpp body.cpp compute_particles.cpp -o compute_particles
+// ./compute_particles particles.csv test.csv 1e-5 1080 1
 
 #include <iostream>
 #include <fstream>
@@ -27,13 +28,13 @@ void update_pos(std::vector<body> &system, double dt);
 // Calculate the accelerations of planets in the system at a timestep.
 void update_acc(std::vector<body> &system, double epsilon, double sigma, double mass);
 // Calculate the new positions and velocites of planets in the system at a given timestep.
-void verlet(std::vector<body> &system, double dt);
+void verlet(std::vector<body> &system, double dt, double epsilon, double sigma, double mass);
 // Read input data from file
 void read_init(std::string input_file, std::vector<body> &system);
 // Read the components of a 3d vector from a line
 void read_vector3d(std::stringstream& data_line, double& x, double& y, double& z);
 // Save the data to file
-void save_data(std::ofstream& savefile, const std::vector<body> &system, double t);
+void save_data(std::ofstream& savefile, const std::vector<body> &system);
 
 
 // ######################################
@@ -57,15 +58,16 @@ int main(int argc, char* argv[])
   read_init(input_file, system); // Read bodies from input file into system
   int N = system.size(); // Number of bodies in system
 
-  cout << "--- Orbital motion simulation ---" << endl;
+  cout << "--- Particle motion simulation ---" << endl;
   cout << " number of bodies N: " << N << endl;
-  for(int p=0; p < N; p++)
-  {
-    cout << "- " << system[p].get_name() << endl; // Display names
-  }
   cout << "       time step dt: " << dt << endl;
   cout << "  number of steps T: " << T << endl;
   cout << "   save steps Tsave: " << Tsave << endl;
+  for(int p=0; p < N; p++) // Display initial positions and velocities.
+  {
+    cout << "Particle " << p << " position " << system[p].get_pos() << endl;
+    cout << "Particle " << p << " velocity " << system[p].get_vel() << endl;
+  }
 
   std::ofstream savefile (output_file); // Open save file
   if (!savefile.is_open()) {
@@ -75,47 +77,31 @@ int main(int argc, char* argv[])
   savefile << std::setprecision(16); // Set the precision of the output to that of a double
   // Write a header for the save file
   savefile << dt << "," << T << "," << Tsave << "," << N << endl;
-  for(int p=0; p < (N-1); p++)
-  {
-    savefile << system[p].get_name() << ",";
-  }
-  savefile << system[N-1].get_name() << endl;
 
-  // -----------------------------------------------------------
-  // ADD YOUR CODE HERE
-  
+  // -----------------------------------------------------------  
   // Initialise variables
-  double epsilon = 
-  double total_time = 0.;
-  int Tsave_counter = 0;
+  double epsilon = 1.73466e-21;
+  double sigma = 0.3345e-9;
+  double mass = 6.63e-26;
+  int save_counter = 0;
   
   // Calculate and save data for timestep t = 0. 
   update_acc(system, epsilon, sigma, mass); // Calculate acceleration at t = 0
-  save_data(savefile, system, total_time);
+  save_data(savefile, system);
     
   // Loop steps until it reaches total number for time steps 'T'.
   for (int t=1; t<=T; t++)
   {
-    // Runs Vel_verlet function.
-    vel_verlet(system, dt);
+    verlet(system, dt, epsilon, sigma, mass); // Runs Vel_verlet function.
     
-    // Adds 1 to Tsave step counter.
-    Tsave_counter++;
+    save_counter++; // Adds 1 to Tsave step counter.
 
-    // Checks if step counter is equal to Tsave.
-    if (Tsave_counter == Tsave)
+    if (save_counter == Tsave) // Checks if step counter is equal to Tsave.
     {
-      // Calculates the total time at this timestep.
-      total_time = t * dt;
-
-      // Computes energies and momentum and saves data to file.
-      save_data(savefile, system, total_time);
-      
-      // Reset Tsave counter to 0.
-      Tsave_counter = 0;   
+      save_data(savefile, system); // Saves position and velocity of each particle to the file
+      save_counter = 0; // Reset Tsave counter to 0.    
     }
   }
-  // -----------------------------------------------------------
   savefile.close();
   return EXIT_SUCCESS; 
 }
@@ -124,8 +110,6 @@ int main(int argc, char* argv[])
 // ######################################
 // ###### Function implementations ######
 // ######################################
-// -----------------------------------------------------------
-// ADD YOUR FUNCTION IMPLEMENTATIONS HERE
 void verlet(std::vector<body> &system, double dt, double epsilon, double sigma, double mass)
 {
   // Completes the leap frog integration scheme in order.
@@ -137,8 +121,7 @@ void verlet(std::vector<body> &system, double dt, double epsilon, double sigma, 
 
 void update_pos(std::vector<body> &system, double dt)
 { 
-  int N = system.size();
-  for (int i = 0; i < N; i++)
+  for (int i = 0; i < system.size(); i++)
   {
     // Initialise variables for this planet.
     vec pos = system[i].get_pos();
@@ -151,8 +134,7 @@ void update_pos(std::vector<body> &system, double dt)
 
 void update_vel(std::vector<body> &system, double dt)
 { 
-  int N = system.size();
-  for (int i = 0; i < N; i++)
+  for (int i = 0; i < system.size(); i++)
   {
     // Initialise variables for this planet.
     vec velocity = system[i].get_vel();
@@ -165,26 +147,25 @@ void update_vel(std::vector<body> &system, double dt)
 
 void update_acc(std::vector<body> &system, double epsilon, double sigma, double mass)
 {
-  int N = system.size();
-
-  for (int i=0; i<N; i++) // Loop through particles.
+  for (int i = 0; i < system.size(); i++) // Loop through particles.
     {
       // Initialise variables for first particle.
       vec tot_force(0.,0.,0.);
       vec posi = system[i].get_pos();
       
-      for (int j=0; j<N; j++) // Loop through other particles.
+      for (int j=0; j<system.size(); j++) // Loop through other particles.
       {
         if (i != j) // Particles must be different!
         {
           vec posj = system[j].get_pos(); // Initialise variables for second particle.
           
-          vec distance = posj - (posi); // Calculates the vector distance between them.
+          vec difference = posj - (posi); // Calculates the vector distance between them.
           
-          double length = distance.length(); // Calculates the length of the vector.
+          double length = difference.length(); // Calculates the length of the vector.
 
-          // Calculates the scalar force component between the 2 particles
-          vec force = distance / (length) * (24 * (epsilon / length) * (2 * pow((sigma / length), 12) - pow((sigma / length), 6)));
+          // Calculates the scalar force component between the 2 particles.
+          // Uses the differential equation of the Lennard-Jones potential.
+          vec force = difference / (length) * (24 * (epsilon / length) * (2 * pow((sigma / length), 12) - pow((sigma / length), 6)));
           
           tot_force += (force); // Sums the different forces on the particle.
         }
@@ -197,8 +178,7 @@ void update_acc(std::vector<body> &system, double epsilon, double sigma, double 
 void read_init(std::string input_file, std::vector<body> &system)
 {
   std::string line; // Declare a string to store each line
-  std::string name; // String to store body name
-  double m, x, y, z, vx, vy, vz; // Doubles to store vector components
+  double x, y, z, vx, vy, vz; // Doubles to store vector components
   int line_cnt = 0; // Line counter
 
   // Declare and initialise an input file stream object
@@ -211,22 +191,16 @@ void read_init(std::string input_file, std::vector<body> &system)
     switch (line_cnt)
     {
       case 1:
-        name = line;
-        break;
-      case 2:
-        m = std::stod(line); // Convert string line into double
-        break;            
-      case 3:
         read_vector3d(data_line, x, y, z); // Read the 3 components of the vector on the line
         break;
-      case 4:
+      case 2:
         read_vector3d(data_line, vx, vy, vz); // Read the 3 components of the vector on the line
-        break;                   
+        break;                              
       }
-      if (line_cnt==4) // Data for one body has been extracted
+      if (line_cnt==2) // Data for one body has been extracted
       {
         line_cnt = 0; // Reset line counter
-        body b(name,m,vec(x,y,z),vec(vx,vy,vz)); // Package data into body
+        body b(vec(x,y,z),vec(vx,vy,vz)); // Package data into body
         system.push_back(b); // Add body to system
       }
     }
@@ -257,22 +231,9 @@ void read_vector3d(std::stringstream& data_line, double& x, double& y, double& z
   } 
 }
 
-void save_data(std::ofstream& savefile, const std::vector<body> &system, double t)
+void save_data(std::ofstream& savefile, const std::vector<body> &system)
 {
     // Function for saving the simulation data to file.
-
-    vec L; // Total angular momentum
-    double E = 0.0; // Total energy
-    for(int p = 0; p < system.size(); p++)
-    { 
-      E += system[p].get_ke() + 0.5*system[p].get_gpe();
-      L += system[p].get_L();
-    }
-    double Lmag = L.length(); // Magnitude of total angular momentum
-
-    // Write a header for this time-step with time, total energy and total mag of L:
-    savefile << t << "," << E << "," << Lmag << endl;
-
     // Loop over the bodies:
     for(int p = 0; p < system.size(); p++)
     { 

@@ -13,14 +13,23 @@ public:
 	body();
 	// Initialize with another body
     body(const body &b);
-    // Initialize explicitly pos, vec
-	body(vec pos, vec vel);
-	// Set to pos, vec
-	void set(vec pos, vec vel);
+    // Initialize explicitly m, pos, vec
+	body(std::string n, double m, vec pos, vec vel);
+	// Set to m, pos, vec
+	void set(std::string n, double m, vec pos, vec vel);
 
 	// Assign to the values of another body
 	body &operator=(const body &b);
 	
+	// Formatted output function for displaying the properties of this body
+	void output(std::ostream &os) const;
+
+	// Get the name
+ 	std::string get_name() const;
+
+    // Get the mass 
+	double get_mass() const;
+
     // Get the position vector
 	vec get_pos() const;
 
@@ -69,8 +78,12 @@ public:
     // A normalised vector pointing between this body and another b
 	vec direction(const body &b) const;
 
+    // Compute the angular momentum of the body relative to a specified point
+	vec angular_momentum(const vec &point) const;
 
 private:
+	std::string name_;
+	double mass_;
 	vec pos_;
 	vec vel_;
 	vec acc_;
