@@ -79,7 +79,7 @@ int main(int argc, char* argv[])
   double epsilon = 0.0103; // In eV
   double sigma = 3.345; // In angstroms (Å)
   double mass = 39.948; // In amu
-  double boundry = 3.0; // Sets the boundries of the cube where the centre is (0, 0, 0)
+  double boundry = 10.0; // Sets the boundries of the cube where the centre is (0, 0, 0)
   int save_counter = 0;
   
   update_acc(system, epsilon, sigma, mass); // Calculate acceleration at t = 0
@@ -115,10 +115,10 @@ void update_pos(std::vector<body> &system, double dt, double boundry)
     vec pos = system[i].get_pos(); // Initialise variables for this planet.
     vec velocity = system[i].get_vel();
 
-    pos += (dt*(velocity)); // Calculates new position based on new velocity.
+    pos += (velocity * (dt)); // Calculates new position based on new velocity.
     system[i].set_pos(pos); // Sets new position.
 
-    // Checking if particle positions are on the boundry. 
+    // Checking if particle positions are outside the boundry. 
     if (pos.getx() >= boundry || pos.getx() <= -boundry)
     {
       system[i].set_vel(velocity.negx()); // Negates the x value of the velocity.
@@ -142,7 +142,7 @@ void update_vel(std::vector<body> &system, double dt)
     vec velocity = system[i].get_vel();
     vec acceleration = system[i].get_acc();
     
-    velocity +=((dt / 2) *(acceleration)); // Calculates new velocity over half a timestep.
+    velocity +=(acceleration * (dt / 2)); // Calculates new velocity over half a timestep.
     system[i].set_vel(velocity); // Sets new velocity to particle.
   }
 }
@@ -161,18 +161,19 @@ void update_acc(std::vector<body> &system, double epsilon, double sigma, double 
         {
           vec posj = system[j].get_pos(); // Initialise variables for second particle.
           
-          vec difference = posj - (posi); // Calculates the vector distance between them.
-          
+          vec difference = posi - (posj); // Calculates the vector distance between them.
+          //cout << difference << endl;
           double length = difference.length(); // Calculates the length of the vector.
-
+          //////////////cout << length << endl;
           // Calculates the scalar force component between the 2 particles.
           // Uses the differential equation of the Lennard-Jones potential.
           vec force = difference / (length) * (24 * (epsilon / length) * (2 * pow((sigma / length), 12) - pow((sigma / length), 6)));
-          
-          // Acceleration in eV/amu, scale 0.0001
+          double potential = (2 * pow((sigma / length), 12) - pow((sigma / length), 6));
+          //////////////cout << potential << endl;
           tot_force += (force); // Sums the different forces on the particle.
         }
       }
+      // Acceleration in eV/angstrom, scale 0.0001
       system[i].set_acc(tot_force / (mass)); // Calculates and sets acceleration variable of particle.
       
     }
