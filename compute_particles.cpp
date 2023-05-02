@@ -61,12 +61,6 @@ int main(int argc, char* argv[])
   cout << "  number of steps T: " << T << endl;
   cout << "   save steps Tsave: " << Tsave << endl;
   cout << "half boundry length: " << boundry << endl;
-  
-  // for(int p=0; p < N; p++) // Display initial positions and velocities.
-  // {
-  //   cout << "Particle " << p << " position " << system[p].get_pos() << endl;
-  //   cout << "Particle " << p << " velocity " << system[p].get_vel() << endl;
-  // }
 
   std::ofstream savefile (output_file); // Open save file
   if (!savefile.is_open()) {
@@ -86,7 +80,7 @@ int main(int argc, char* argv[])
   double momentum = 0.0;
   
   update_acc(system, epsilon, sigma, mass); // Calculate acceleration at t = 0
-  save_data(savefile, system); // Calculate and save data for timestep t = 0.
+  save_data(savefile, system); // Save data for timestep t = 0.
     
   for (int t=1; t<=T; t++) // Loop steps until it reaches total number for time steps 'T'.
   {
@@ -117,7 +111,7 @@ int main(int argc, char* argv[])
   }
   savefile.close();
   cout << "Average pressure of System = " << 3 * ((momentum)/(pow((boundry*2), 2) * dt * T)) << 
-  " Pascals" << endl;
+  " Pa" << endl;
   cout << "End Temperature of System = " << calc_temp(system, mass) << " K" << endl;
   return EXIT_SUCCESS; 
 }
@@ -169,7 +163,7 @@ void update_acc(std::vector<body> &system, double epsilon, double sigma, double 
 {
   for (int i = 0; i < system.size(); i++) // Loop through particles.
     {
-      // Initialise variables for first particle.
+      // Initialise variables for each particle.
       vec tot_force(0.,0.,0.);
       vec posi = system[i].get_pos();
       
