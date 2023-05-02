@@ -70,6 +70,7 @@ public:
 	vec direction(const body &b) const;
 
 
+
 private:
 	vec pos_;
 	vec vel_;

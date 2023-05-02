@@ -1,4 +1,4 @@
-// Assessment 4: N-body Particle Model
+// Assessment 4: N-body Molecular Dynamics Model
 
 // g++ -std=c++17 vector3d.cpp body.cpp compute_particles.cpp -o compute_particles
 // ./compute_particles particles.csv test.csv 1e-5 1080 1
@@ -39,8 +39,8 @@ void save_data(std::ofstream& savefile, const std::vector<body> &system);
 int main(int argc, char* argv[])
 {
   // Checking if number of arguments is equal to 4:
-  if (argc != 6) {
-    cout << "ERROR: need 4 arguments - compute_orbits <input_file> <output_file> <dt> <T> <Tsave>" << endl;
+  if (argc != 7) {
+    cout << "ERROR: need 6 arguments - compute_particles <input_file> <output_file> <dt> <T> <Tsave> <boundry>" << endl;
     return EXIT_FAILURE;
   }
   // Process command line inputs:
@@ -49,21 +49,24 @@ int main(int argc, char* argv[])
   double dt = atof(argv[3]); // Time step
   int T = atoi(argv[4]); // Total number of time steps
   int Tsave = atoi(argv[5]); // Number of steps between each save
+  double boundry = atoi(argv[6]); // Size of boundry limit in angstroms (Å)
 
   std::vector<body> system; // Create an empty vector container for bodies
   read_init(input_file, system); // Read bodies from input file into system
   int N = system.size(); // Number of bodies in system
 
-  cout << "--- Particle motion simulation ---" << endl;
+  cout << "--- Molecular Dynamics simulation ---" << endl;
   cout << " number of bodies N: " << N << endl;
   cout << "       time step dt: " << dt << endl;
   cout << "  number of steps T: " << T << endl;
   cout << "   save steps Tsave: " << Tsave << endl;
-  for(int p=0; p < N; p++) // Display initial positions and velocities.
-  {
-    cout << "Particle " << p << " position " << system[p].get_pos() << endl;
-    cout << "Particle " << p << " velocity " << system[p].get_vel() << endl;
-  }
+  cout << "half boundry length: " << boundry << endl;
+  
+  // for(int p=0; p < N; p++) // Display initial positions and velocities.
+  // {
+  //   cout << "Particle " << p << " position " << system[p].get_pos() << endl;
+  //   cout << "Particle " << p << " velocity " << system[p].get_vel() << endl;
+  // }
 
   std::ofstream savefile (output_file); // Open save file
   if (!savefile.is_open()) {
@@ -79,18 +82,30 @@ int main(int argc, char* argv[])
   double epsilon = 0.0103; // In eV
   double sigma = 3.345; // In angstroms (Å)
   double mass = 39.948; // In amu
-  double boundry = 10.0; // Sets the boundries of the cube where the centre is (0, 0, 0)
   int save_counter = 0;
+  double momentum = 0.0;
   
   update_acc(system, epsilon, sigma, mass); // Calculate acceleration at t = 0
   save_data(savefile, system); // Calculate and save data for timestep t = 0.
     
   for (int t=1; t<=T; t++) // Loop steps until it reaches total number for time steps 'T'.
   {
+    std::vector<body> oldsystem = system; // Saves a copy of the current system.
+
+    // Runs Vel_verlet integration steps to update system.
     update_vel(system, dt);
     update_pos(system, dt, boundry);
     update_acc(system, epsilon, sigma, mass);
-    update_vel(system, dt); // Runs Vel_verlet function.
+    update_vel(system, dt); 
+    
+    // Pressure Calculations
+    for (int i = 0; i < system.size(); i++)
+    { // Determines if the particle has crossed over the plane x = 0 between timesteps.
+      if (oldsystem[i].get_pos().getx() > 0 && system[i].get_pos().getx() < 0)
+      {
+        momentum += abs((mass * system[i].get_vel().getx())); // Summs the momentum in the x axis
+      } // Makes sure the value is always positive.
+    }
     
     save_counter++; // Adds 1 to Tsave step counter.
 
@@ -101,6 +116,9 @@ int main(int argc, char* argv[])
     }
   }
   savefile.close();
+  cout << "Average pressure of System = " << 3 * ((momentum)/(pow((boundry*2), 2) * dt * T)) << 
+  " Pascals" << endl;
+  cout << "End Temperature of System = " << calc_temp(system, mass) << " K" << endl;
   return EXIT_SUCCESS; 
 }
 
@@ -112,9 +130,9 @@ void update_pos(std::vector<body> &system, double dt, double boundry)
 { 
   for (int i = 0; i < system.size(); i++)
   {
-    vec pos = system[i].get_pos(); // Initialise variables for this planet.
+    vec pos = system[i].get_pos(); // Initialise variables for this particle.
     vec velocity = system[i].get_vel();
-
+    
     pos += (velocity * (dt)); // Calculates new position based on new velocity.
     system[i].set_pos(pos); // Sets new position.
 
@@ -123,13 +141,13 @@ void update_pos(std::vector<body> &system, double dt, double boundry)
     {
       system[i].set_vel(velocity.negx()); // Negates the x value of the velocity.
     }
-    if (pos.gety() >= boundry || pos.gety() <= -boundry) // Negates the y value of the velocity.
+    if (pos.gety() >= boundry || pos.gety() <= -boundry) 
     {
-      system[i].set_vel(velocity.negy());
+      system[i].set_vel(velocity.negy()); // Negates the y value of the velocity.
     }
-    if (pos.getz() >= boundry || pos.getz() <= -boundry) // Negates the z value of the velocity.
+    if (pos.getz() >= boundry || pos.getz() <= -boundry) 
     {
-      system[i].set_vel(velocity.negz());
+      system[i].set_vel(velocity.negz());// Negates the z value of the velocity.
     }
   }
 }
@@ -143,7 +161,7 @@ void update_vel(std::vector<body> &system, double dt)
     vec acceleration = system[i].get_acc();
     
     velocity +=(acceleration * (dt / 2)); // Calculates new velocity over half a timestep.
-    system[i].set_vel(velocity); // Sets new velocity to particle.
+    system[i].set_vel(velocity); // Sets new velocity to particle. In angstrom per second
   }
 }
 
@@ -162,18 +180,17 @@ void update_acc(std::vector<body> &system, double epsilon, double sigma, double 
           vec posj = system[j].get_pos(); // Initialise variables for second particle.
           
           vec difference = posi - (posj); // Calculates the vector distance between them.
-          //cout << difference << endl;
+          
           double length = difference.length(); // Calculates the length of the vector.
-          //////////////cout << length << endl;
+          
           // Calculates the scalar force component between the 2 particles.
           // Uses the differential equation of the Lennard-Jones potential.
           vec force = difference / (length) * (24 * (epsilon / length) * (2 * pow((sigma / length), 12) - pow((sigma / length), 6)));
-          double potential = (2 * pow((sigma / length), 12) - pow((sigma / length), 6));
-          //////////////cout << potential << endl;
+          
           tot_force += (force); // Sums the different forces on the particle.
         }
       }
-      // Acceleration in eV/angstrom, scale 0.0001
+      // Acceleration in angstrom per unit time squared, factored down by 1.6e-19
       system[i].set_acc(tot_force / (mass)); // Calculates and sets acceleration variable of particle.
       
     }
@@ -183,11 +200,10 @@ double calc_temp(std::vector<body> &system, double mass)
 {
   double tot_energy = 0;
   for (int i = 0; i < system.size(); i++) // Loop through particles.
-  {
-    tot_energy += (0.5 * mass * system[i].get_vel().lengthsq());
+  { // Factors the changes from; eV's to joules, angstroms to meters
+    tot_energy += (1.6e-19 * 0.5 * mass * system[i].get_vel().lengthsq());
   }
-  // Note the values need to be adjusted depending on units of mass and epsilon ect. ##########################
-  return(tot_energy / (1.5 * 1.38e-23)); // Returns temperature of system.
+  return(tot_energy / (1.5 * system.size() * 1.38e-23)); // Returns temperature of whole system in kelvin.
 }
 
 void read_init(std::string input_file, std::vector<body> &system)

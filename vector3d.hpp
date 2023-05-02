@@ -67,10 +67,13 @@ public:
 	// Return z vector value
 	double getz() const;
 
+	// Negates the x value and returns the vector
 	vec negx() const;
-
+	
+	// Negates the y value and returns the vector
 	vec negy() const;
 
+	// Negates the z value and returns the vector
 	vec negz() const;
 
 private:
